@@ -1,4 +1,5 @@
 import json
+import re
 
 from fastapi import APIRouter, HTTPException
 from openai import AsyncOpenAI
@@ -28,6 +29,18 @@ VERDICT_SCHEMA = {
 }
 
 
+def _extract_verdict_label(*texts: str) -> str:
+    patterns = (
+        ("NO_GO", r"(?<![\w-])NO[\s_-]?GO(?![\w-])"),
+        ("PIVOT", r"(?<![\w-])PIVOT(?![\w-])"),
+        ("GO", r"(?<![\w-])GO(?![\w-])"),
+    )
+    for text in texts:
+        for label, pattern in patterns:
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                return label
+    return "PIVOT"
+
 
 @router.post("")
 async def create_verdict(payload: VerdictRequest):
@@ -43,6 +56,7 @@ async def create_verdict(payload: VerdictRequest):
         "business outcome. Use PIVOT only when the idea has promise but needs a "
         "material change to target customer, value proposition, distribution, or "
         "business model; do not use it as a compromise or uncertainty bucket. "
+        "Start verdict_text with exactly one label: GO:, NO_GO:, or PIVOT:. "
         "Keep verdict_text to 2 short sentences and "
         "final_prophecy to 1 short sentence.\n\n"
         f"Founder idea:\n{payload.idea}\n\n"
@@ -69,12 +83,24 @@ async def create_verdict(payload: VerdictRequest):
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Verdict generation failed: {exc}") from exc
 
+    verdict_label = _extract_verdict_label(
+        verdict["verdict_text"],
+        payload.debate_transcript,
+    )
     card_prompt = (
-        "Vertical portrait mystical oracle card. Vellum parchment aesthetic, vivid "
-        "tarot-inspired border, palm lines glowing under gold ink annotations, "
-        "small arcane glyphs, refined dark-magenta shadows, dramatic headline based "
-        f"on this agent verdict: {verdict['winning_agent']}. Include the exact title "
-        "'THE MYSTIC COURT' and a short verdict headline. Elegant, legible, premium."
+        "Vertical 9:16 Verdict Constellation Card for a mystical startup tribunal. "
+        "Create a court-like tarot card scene in a ceremonial judgment chamber, "
+        "framed by aged vellum parchment, ornate arcane borderwork, gold ink filigree, "
+        "and deep magenta-indigo shadows. At the exact center, place a glowing verdict "
+        f"seal engraved with the exact label '{verdict_label}'. Around the seal, arrange "
+        "five distinct agent sigils as a constellation ring, connected by fine celestial "
+        "geometry and tiny stars. Put balanced scales of judgment behind the seal, with "
+        "legal parchment bands and star-map markings that make the image feel like the "
+        "official result of a debate. Include the exact title 'THE MYSTIC COURT' at the "
+        f"top and a short verdict headline inspired by {verdict['winning_agent']}. "
+        "Elegant, symmetrical, premium, legible, vertical composition. Negative guidance: "
+        "no hands, no palms, no fingers, no arms, no body parts, no anatomy, no palmistry "
+        "diagram, no hand silhouettes."
     )
 
     oracle_card_url = await generate_image_gemini(card_prompt, aspect_ratio="9:16")
