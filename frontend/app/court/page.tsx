@@ -3,8 +3,7 @@
 import * as React from "react";
 import { Send } from "lucide-react";
 
-import AgentCard from "@/components/AgentCard";
-import DebateArena from "@/components/DebateArena";
+import CouncilChamber, { AGENT_META } from "@/components/CouncilChamber";
 import OracleVerdict from "@/components/OracleVerdict";
 import PalmScanner from "@/components/PalmScanner";
 import { Button } from "@/components/ui/button";
@@ -72,7 +71,7 @@ export default function CourtPage() {
           <div className="space-y-6">
             {submittedIdea && palmReading ? (
               <>
-                <DebateArena
+                <CouncilChamber
                   idea={submittedIdea}
                   palmContext={palmReading}
                   onComplete={setDebateTranscript}
@@ -88,23 +87,20 @@ export default function CourtPage() {
                 <CardHeader>
                   <CardTitle>Step 3: Await the Court</CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
-                  {[
-                    ["ancient_oracle", "The Ancient Oracle", "𓂀"],
-                    ["rage_gremlin", "The Rage Gremlin", "!!"],
-                    ["hype_prophet", "The Hype Prophet", "^"],
-                    ["skeptic_scholar", "The Skeptic Scholar", "?"]
-                  ].map(([agentKey, agentName, emoji]) => (
-                    <AgentCard
+                <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {Object.entries(AGENT_META).map(([agentKey, agent]) => (
+                    <div
                       key={agentKey}
-                      agentKey={agentKey}
-                      agentName={agentName}
-                      emoji={emoji}
-                      round={1}
-                      content="The agent waits behind the veil."
-                      done
-                      mood="dormant"
-                    />
+                      className="rounded-md border border-border bg-card/70 p-4 text-center"
+                    >
+                      <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-border bg-background text-2xl font-black text-primary shadow-glow">
+                        {agent.emoji}
+                      </div>
+                      <div className="mt-3 text-sm font-semibold text-foreground">{agent.name}</div>
+                      <div className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        dormant
+                      </div>
+                    </div>
                   ))}
                 </CardContent>
               </Card>
