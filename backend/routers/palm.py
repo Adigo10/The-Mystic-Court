@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
+from routers.image_gen import generate_image_gemini
+
 router = APIRouter()
 
 
@@ -77,16 +79,6 @@ def _get_mime_type(image_base64: str) -> str:
     return "image/jpeg"
 
 
-def _image_result_to_url(image_result) -> str:
-    item = image_result.data[0]
-    url = getattr(item, "url", None)
-    if url:
-        return url
-    b64_json = getattr(item, "b64_json", None)
-    if b64_json:
-        return f"data:image/png;base64,{b64_json}"
-    raise HTTPException(status_code=502, detail="Image model returned no usable image data.")
-
 
 @router.post("/read")
 async def read_palm(payload: PalmReadRequest):
@@ -138,21 +130,11 @@ async def read_palm(payload: PalmReadRequest):
 
 @router.post("/image")
 async def generate_palm_image(payload: PalmImageRequest):
-    client = AsyncOpenAI()
     prompt = (
         "Create a mystical palm map visual inspired by a readable hand diagram. "
         "Show luminous palm lines, elemental glyphs, tiny gold annotations, smoky "
         "violet shadows, and a refined oracle-table aesthetic. Base the symbolism "
         f"on this palm summary: {payload.palm_summary}"
     )
-
-    try:
-        image = await client.images.generate(
-            model="gpt-image-2-2026-04-21",
-            prompt=prompt,
-            size="1024x1024",
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Palm image generation failed: {exc}") from exc
-
-    return {"image_url": _image_result_to_url(image)}
+    image_url = await generate_image_gemini(prompt, aspect_ratio="1:1")
+    return {"image_url": image_url}
