@@ -14,22 +14,33 @@ from agents.personas import PERSONAS, VOTE_INSTRUCTIONS
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-MAX_TURNS = 14
-VOTE_EVERY = 5
+MAX_TURNS = 5
+VOTE_EVERY = 3
 CONSENSUS_THRESHOLD = 4
 VERDICTS = ("GO", "NO_GO", "PIVOT")
+AGENT_REPLY_GUIDANCE = (
+    "Keep visible replies to 1-2 sentences, 45-70 words max. "
+    "Stay in character, make one sharp point, and end with one concrete recommendation."
+)
+MODERATOR_REPLY_GUIDANCE = (
+    "Keep prompt_hint and reason to one short sentence each, under 120 characters."
+)
+FINAL_REPLY_GUIDANCE = (
+    "Keep the final verdict to 2-3 short sentences: decision, rationale, next move."
+)
+VOTE_REASON_LIMIT = 80
 
 MODERATOR_JSON_SCHEMA = {
     "action": '"speak"|"call_vote"',
     "next_agent": list(PERSONAS.keys()),
-    "prompt_hint": "one sentence telling the selected agent what to address",
-    "reason": "short reason for this moderation choice",
+    "prompt_hint": "one short sentence telling the selected agent what to address",
+    "reason": "one short reason for this moderation choice",
 }
 
 VOTE_JSON_SCHEMA = {
     "verdict": '"GO"|"NO_GO"|"PIVOT"',
     "confidence": "0..1",
-    "reason": "<=140 chars",
+    "reason": f"<={VOTE_REASON_LIMIT} chars",
 }
 
 
@@ -248,14 +259,15 @@ async def moderate(
     fallback = {
         "action": "speak",
         "next_agent": fallback_agent,
-        "prompt_hint": "Advance the debate by addressing the strongest unresolved risk or opportunity.",
+        "prompt_hint": "Address the strongest unresolved risk or upside.",
         "reason": "Round-robin fallback.",
     }
 
     system_prompt = (
         "You are the off-stage moderator for a five-agent startup council. "
         "Choose who should speak next, or call a vote if the debate is ready. "
-        "Never choose the same speaker twice in a row. Return only strict JSON "
+        "Never choose the same speaker twice in a row. "
+        f"{MODERATOR_REPLY_GUIDANCE} Return only strict JSON "
         f"matching this schema: {json.dumps(MODERATOR_JSON_SCHEMA, ensure_ascii=True)}."
     )
     user_prompt = (
@@ -302,8 +314,8 @@ async def moderate(
     return {
         "action": action,
         "next_agent": next_agent,
-        "prompt_hint": str(parsed.get("prompt_hint") or fallback["prompt_hint"])[:500],
-        "reason": str(parsed.get("reason") or "Moderator selected the next council move.")[:500],
+        "prompt_hint": str(parsed.get("prompt_hint") or fallback["prompt_hint"])[:120],
+        "reason": str(parsed.get("reason") or "Moderator selected the next move.")[:120],
     }
 
 
@@ -319,7 +331,7 @@ async def stream_agent_turn(
     system_prompt = (
         f"{persona['system_prompt']}\n\n"
         "You are speaking in a sequential council debate. Directly build on the "
-        "shared transcript. Keep the reply to 2-4 concise paragraphs."
+        f"shared transcript. {AGENT_REPLY_GUIDANCE}"
     )
     user_prompt = (
         "Council context:\n"
@@ -375,6 +387,7 @@ async def _collect_vote(
     system_prompt = (
         f"{persona['system_prompt']}\n\n"
         "You are now voting as a council member. "
+        f"Keep the reason under {VOTE_REASON_LIMIT} characters. "
         f"{VOTE_INSTRUCTIONS}"
     )
     user_prompt = (
@@ -400,7 +413,7 @@ async def _collect_vote(
             raise ValueError(f"invalid verdict: {verdict}")
         confidence = float(parsed.get("confidence", 0.0))
         confidence = max(0.0, min(1.0, confidence))
-        reason = str(parsed.get("reason", ""))[:140] or "no reason supplied"
+        reason = str(parsed.get("reason", ""))[:VOTE_REASON_LIMIT] or "no reason supplied"
         return {
             "agent": agent_key,
             "verdict": verdict,
@@ -456,7 +469,7 @@ async def synthesize_verdict(
 ) -> AsyncIterator[dict[str, Any]]:
     system_prompt = (
         "You are the final court scribe. Synthesize the debate into a concise "
-        "founder-facing verdict with the decision, rationale, and next move."
+        f"founder-facing verdict with the decision, rationale, and next move. {FINAL_REPLY_GUIDANCE}"
     )
     user_prompt = (
         "Council context:\n"
@@ -654,7 +667,7 @@ async def debate_stream(
             f"{palm_summary}\n\n"
             "Exa market research snippets:\n"
             f"{research_block}\n\n"
-            "Give your Round 1 argument in 2-4 punchy paragraphs. Be in character."
+            f"Give your Round 1 argument. {AGENT_REPLY_GUIDANCE}"
         )
         round_one_prompts = {agent_key: round_one_prompt for agent_key in PERSONAS}
         round_one_moods = {
@@ -680,9 +693,8 @@ async def debate_stream(
             agent_key: (
                 "Round 1 transcript:\n"
                 f"{transcript}\n\n"
-                "Now deliver your Round 2 rebuttal. Escalate your persona, directly "
-                "respond to at least two other agents, and end with one concrete "
-                "verdict recommendation for the founder."
+                "Now deliver your Round 2 rebuttal. Directly respond to one other "
+                f"agent and give a verdict recommendation. {AGENT_REPLY_GUIDANCE}"
             )
             for agent_key in PERSONAS
         }

@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import AgentPortrait from "@/components/AgentPortrait";
 import ConsensusMeter from "@/components/ConsensusMeter";
 import CrystalBallLoader from "@/components/CrystalBallLoader";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   AgentKey,
@@ -43,6 +45,7 @@ type CouncilState = {
   phase: DebatePhase;
   turn: number;
   currentSpeaker: AgentKey | null;
+  audioSpeaker: AgentKey | null;
   currentHint: string;
   transcript: CouncilMessage[];
   streamingByTurn: Record<number, string>;
@@ -61,6 +64,7 @@ const INITIAL_STATE: CouncilState = {
   phase: "connecting",
   turn: 0,
   currentSpeaker: null,
+  audioSpeaker: null,
   currentHint: "",
   transcript: [],
   streamingByTurn: {},
@@ -77,7 +81,7 @@ const INITIAL_STATE: CouncilState = {
 
 // ── Audio helpers ─────────────────────────────────────────────────────────────
 
-function speakableExcerpt(text: string, maxChars = 500): string {
+function speakableExcerpt(text: string, maxChars = 280): string {
   if (text.length <= maxChars) return text;
   const cut = text.slice(0, maxChars);
   const lastEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
@@ -109,6 +113,7 @@ export default function CouncilChamber({
   onComplete: (transcript: string) => void;
 }) {
   const [state, setState] = React.useState<CouncilState>(INITIAL_STATE);
+  const [transcriptExpanded, setTranscriptExpanded] = React.useState(false);
   const stateRef = React.useRef<CouncilState>(INITIAL_STATE);
   const transcriptRef = React.useRef<HTMLDivElement | null>(null);
   const seenTurnsRef = React.useRef<Set<string>>(new Set());
@@ -140,6 +145,7 @@ export default function CouncilChamber({
               src.buffer = decoded;
               src.connect(actx.destination);
               src.onended = () => resolve();
+              updateState((current) => ({ ...current, audioSpeaker: item.agent }));
               src.start(0);
             })
         );
@@ -147,6 +153,9 @@ export default function CouncilChamber({
       .catch((err) => console.warn("TTS play error:", err))
       .finally(() => {
         isPlayingRef.current = false;
+        updateState((current) =>
+          current.audioSpeaker === item.agent ? { ...current, audioSpeaker: null } : current
+        );
         drainQueueRef.current();
       });
   };
@@ -172,6 +181,7 @@ export default function CouncilChamber({
     seenTurnsRef.current = new Set();
     audioQueueRef.current = [];
     isPlayingRef.current = false;
+    setTranscriptExpanded(false);
     stateRef.current = INITIAL_STATE;
     setState(INITIAL_STATE);
 
@@ -228,7 +238,7 @@ export default function CouncilChamber({
       return;
     }
     element.scrollTop = element.scrollHeight;
-  }, [state.transcript, state.streamingByTurn, state.finalVerdict]);
+  }, [state.transcript, state.streamingByTurn, state.finalVerdict, transcriptExpanded]);
 
   React.useEffect(() => {
     for (const message of state.transcript) {
@@ -275,7 +285,7 @@ export default function CouncilChamber({
               <AgentPortrait
                 key={agentKey}
                 agentKey={agentKey}
-                isActive={state.currentSpeaker === agentKey}
+                isActive={state.audioSpeaker === agentKey}
                 phase={state.phase}
                 vote={state.liveVotes[agentKey]}
               />
@@ -294,6 +304,7 @@ export default function CouncilChamber({
           <CenterSpotlight
             phase={state.phase}
             speaker={state.currentSpeaker}
+            audioSpeaker={state.audioSpeaker}
             hint={state.currentHint}
             consensusVerdict={state.consensusVerdict}
             voteRound={state.voteRound}
@@ -311,7 +322,7 @@ export default function CouncilChamber({
               >
                 <AgentPortrait
                   agentKey={agentKey}
-                  isActive={state.currentSpeaker === agentKey}
+                  isActive={state.audioSpeaker === agentKey}
                   phase={state.phase}
                   vote={state.liveVotes[agentKey]}
                 />
@@ -320,63 +331,82 @@ export default function CouncilChamber({
           })}
         </div>
 
-        <div
-          className={cn(
-            "flex h-[420px] flex-col rounded-md border border-border bg-card/85 shadow-glow transition-opacity",
-            state.phase === "voting" && "opacity-60"
-          )}
-        >
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="rounded-md border border-border bg-card/85 shadow-glow">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <div className="font-serif text-lg font-bold text-foreground">Shared Transcript</div>
               <div className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Turn {state.turn}
               </div>
             </div>
-            {state.currentSpeaker && state.phase === "speaking" ? (
-              <div className="text-right text-xs uppercase tracking-[0.18em] text-primary">
-                {AGENT_META[state.currentSpeaker].name} speaking
-              </div>
-            ) : null}
-          </div>
-          <div ref={transcriptRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-            <AnimatePresence initial={false}>
-              {state.transcript.map((message) => (
-                <TranscriptBubble
-                  key={`${message.turn}-${message.agent}`}
-                  message={message}
-                  text={message.text}
-                  done
-                />
-              ))}
-              {state.currentSpeaker && liveTurnText ? (
-                <TranscriptBubble
-                  key={`streaming-${state.turn}-${state.currentSpeaker}`}
-                  message={{
-                    agent: state.currentSpeaker,
-                    turn: state.turn,
-                    text: liveTurnText
-                  }}
-                  text={liveTurnText}
-                  done={state.phase !== "speaking"}
-                />
+            <div className="flex items-center gap-3">
+              {state.currentSpeaker && state.phase === "speaking" ? (
+                <div className="text-right text-xs uppercase tracking-[0.18em] text-primary">
+                  {AGENT_META[state.currentSpeaker].name} speaking
+                </div>
               ) : null}
-              {state.finalVerdict ? (
-                <motion.div
-                  key="final-verdict-stream"
-                  className="rounded-md border border-primary/50 bg-primary/10 p-3 text-sm leading-6 text-foreground"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                    Final Verdict
-                  </div>
-                  <RevealText text={state.finalVerdict} done={state.phase === "complete"} />
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setTranscriptExpanded((expanded) => !expanded)}
+                aria-expanded={transcriptExpanded}
+              >
+                {transcriptExpanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                {transcriptExpanded ? "Hide Transcript" : "Show Transcript"}
+              </Button>
+            </div>
           </div>
+          {transcriptExpanded ? (
+            <div
+              ref={transcriptRef}
+              className={cn(
+                "h-[420px] space-y-3 overflow-y-auto p-4 transition-opacity",
+                state.phase === "voting" && "opacity-60"
+              )}
+            >
+              <AnimatePresence initial={false}>
+                {state.transcript.map((message) => (
+                  <TranscriptBubble
+                    key={`${message.turn}-${message.agent}`}
+                    message={message}
+                    text={message.text}
+                    done
+                  />
+                ))}
+                {state.currentSpeaker && liveTurnText ? (
+                  <TranscriptBubble
+                    key={`streaming-${state.turn}-${state.currentSpeaker}`}
+                    message={{
+                      agent: state.currentSpeaker,
+                      turn: state.turn,
+                      text: liveTurnText
+                    }}
+                    text={liveTurnText}
+                    done={state.phase !== "speaking"}
+                  />
+                ) : null}
+                {state.finalVerdict ? (
+                  <motion.div
+                    key="final-verdict-stream"
+                    className="rounded-md border border-primary/50 bg-primary/10 p-3 text-sm leading-6 text-foreground"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                      Final Verdict
+                    </div>
+                    <RevealText text={state.finalVerdict} done={state.phase === "complete"} />
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-3 rounded-md border border-border bg-card/70 p-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
@@ -596,12 +626,14 @@ function RevealText({ text, done }: { text: string; done: boolean }) {
 function CenterSpotlight({
   phase,
   speaker,
+  audioSpeaker,
   hint,
   consensusVerdict,
   voteRound
 }: {
   phase: DebatePhase;
   speaker: AgentKey | null;
+  audioSpeaker: AgentKey | null;
   hint: string;
   consensusVerdict: CouncilVerdict | null;
   voteRound: number;
@@ -609,7 +641,10 @@ function CenterSpotlight({
   let title = "The chamber is gathering";
   let subtitle = "Listen for the first omen.";
 
-  if (phase === "voting") {
+  if (audioSpeaker) {
+    title = AGENT_META[audioSpeaker].name;
+    subtitle = "Voice in session.";
+  } else if (phase === "voting") {
     title = `Vote round ${voteRound}`;
     subtitle = "The council is casting verdicts.";
   } else if (phase === "consensus" && consensusVerdict) {

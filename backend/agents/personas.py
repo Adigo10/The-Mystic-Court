@@ -54,5 +54,5 @@ PERSONAS = {
 VOTE_INSTRUCTIONS = (
     'Return only strict JSON matching this schema: '
     '{"verdict": "GO"|"NO_GO"|"PIVOT", "confidence": 0..1, '
-    '"reason": "<=140 chars"}.'
+    '"reason": "<=80 chars"}.'
 )
