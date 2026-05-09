@@ -75,18 +75,27 @@ const INITIAL_STATE: CouncilState = {
   errorMessage: ""
 };
 
-async function playAgentAudio(agent: AgentKey, text: string): Promise<void> {
+// ── Audio helpers ─────────────────────────────────────────────────────────────
+
+function speakableExcerpt(text: string, maxChars = 500): string {
+  if (text.length <= maxChars) return text;
+  const cut = text.slice(0, maxChars);
+  const lastEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  return lastEnd > 80 ? cut.slice(0, lastEnd + 1) : cut;
+}
+
+async function fetchTTSBuffer(agent: AgentKey, text: string): Promise<ArrayBuffer | null> {
   try {
-    const params = new URLSearchParams({ text, agent });
-    const response = await fetch(`${API_BASE}/api/tts?${params.toString()}`);
-    if (!response.ok) return;
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.onended = () => URL.revokeObjectURL(url);
-    await audio.play();
-  } catch {
-    // Silently fall back if TTS is unavailable or autoplay is blocked
+    const params = new URLSearchParams({ text: speakableExcerpt(text), agent });
+    const resp = await fetch(`${API_BASE}/api/tts?${params.toString()}`);
+    if (!resp.ok) {
+      console.warn(`TTS ${agent} ${resp.status}: ${await resp.text()}`);
+      return null;
+    }
+    return resp.arrayBuffer();
+  } catch (err) {
+    console.warn("TTS fetch error:", err);
+    return null;
   }
 }
 
@@ -104,14 +113,65 @@ export default function CouncilChamber({
   const transcriptRef = React.useRef<HTMLDivElement | null>(null);
   const seenTurnsRef = React.useRef<Set<string>>(new Set());
 
+  // ── Serial audio queue (one agent voice at a time) ────────────────────────
+  const audioCtxRef = React.useRef<AudioContext | null>(null);
+  const audioQueueRef = React.useRef<Array<{ agent: AgentKey; text: string }>>([]);
+  const isPlayingRef = React.useRef(false);
+  // Stable-ref pattern so the recursive drain always calls the latest closure
+  const drainQueueRef = React.useRef<() => void>(() => {});
+
+  drainQueueRef.current = () => {
+    if (isPlayingRef.current) return;
+    const item = audioQueueRef.current.shift();
+    if (!item) return;
+    const ctx = audioCtxRef.current;
+    if (!ctx || ctx.state === "closed") return;
+
+    isPlayingRef.current = true;
+    fetchTTSBuffer(item.agent, item.text)
+      .then((buffer) => {
+        if (!buffer) return Promise.resolve();
+        const actx = audioCtxRef.current;
+        if (!actx || actx.state === "closed") return Promise.resolve();
+        return actx.decodeAudioData(buffer).then(
+          (decoded) =>
+            new Promise<void>((resolve) => {
+              const src = actx.createBufferSource();
+              src.buffer = decoded;
+              src.connect(actx.destination);
+              src.onended = () => resolve();
+              src.start(0);
+            })
+        );
+      })
+      .catch((err) => console.warn("TTS play error:", err))
+      .finally(() => {
+        isPlayingRef.current = false;
+        drainQueueRef.current();
+      });
+  };
+
   const updateState = React.useCallback((updater: (current: CouncilState) => CouncilState) => {
     const next = updater(stateRef.current);
     stateRef.current = next;
     setState(next);
   }, []);
 
+  // Unlock AudioContext immediately on mount (right after user clicked "Summon the Agents")
+  React.useEffect(() => {
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+    ctx.resume().catch(() => {});
+    return () => {
+      ctx.close();
+      audioCtxRef.current = null;
+    };
+  }, []);
+
   React.useEffect(() => {
     seenTurnsRef.current = new Set();
+    audioQueueRef.current = [];
+    isPlayingRef.current = false;
     stateRef.current = INITIAL_STATE;
     setState(INITIAL_STATE);
 
@@ -175,7 +235,8 @@ export default function CouncilChamber({
       const key = `${message.agent}-${message.turn}`;
       if (!seenTurnsRef.current.has(key)) {
         seenTurnsRef.current.add(key);
-        void playAgentAudio(message.agent, message.text);
+        audioQueueRef.current.push({ agent: message.agent, text: message.text });
+        drainQueueRef.current();
       }
     }
   }, [state.transcript]);
