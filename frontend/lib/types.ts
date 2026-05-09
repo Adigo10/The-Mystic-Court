@@ -46,6 +46,7 @@ export type DebatePhase =
   | "error";
 
 export type CouncilVerdict = "GO" | "NO_GO" | "PIVOT";
+export type AgentVoteVerdict = CouncilVerdict | "ABSTAIN";
 
 export type VoteTally = Record<CouncilVerdict, number>;
 
@@ -58,9 +59,10 @@ export type ModeratorDecision = {
 
 export type Vote = {
   agent: AgentKey;
-  verdict: CouncilVerdict;
+  verdict: AgentVoteVerdict;
   confidence: number;
   reason: string;
+  valid?: boolean;
   round: number;
 };
 

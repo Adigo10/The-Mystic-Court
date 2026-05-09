@@ -506,6 +506,7 @@ function dispatchCouncilEvent(
             verdict: payload.verdict,
             confidence: payload.confidence,
             reason: payload.reason,
+            valid: payload.valid,
             round: payload.round
           }
         }
@@ -548,7 +549,7 @@ function dispatchCouncilEvent(
           phase: "complete" as DebatePhase,
           finalVerdict
         };
-        window.setTimeout(() => onComplete(buildTranscript(next.transcript)), 0);
+        window.setTimeout(() => onComplete(buildTranscript(next.transcript, finalVerdict)), 0);
         return next;
       });
       closeSource();
@@ -667,9 +668,15 @@ function CenterSpotlight({
   );
 }
 
-function buildTranscript(messages: CouncilMessage[]) {
-  return messages
+function buildTranscript(messages: CouncilMessage[], finalVerdict: string) {
+  const transcript = [...messages]
     .sort((a, b) => a.turn - b.turn)
     .map((message) => `${AGENT_META[message.agent].name} Turn ${message.turn}:\n${message.text}`)
     .join("\n\n");
+
+  if (!finalVerdict.trim()) {
+    return transcript;
+  }
+
+  return `${transcript}\n\nCouncil Streamed Final Verdict:\n${finalVerdict}`;
 }

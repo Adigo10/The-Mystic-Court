@@ -14,8 +14,9 @@ from agents.personas import PERSONAS, VOTE_INSTRUCTIONS
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-MAX_TURNS = 5
+MAX_TURNS = 8
 VOTE_EVERY = 3
+MIN_TURNS_BEFORE_VOTE = len(PERSONAS)
 CONSENSUS_THRESHOLD = 4
 VERDICTS = ("GO", "NO_GO", "PIVOT")
 AGENT_REPLY_GUIDANCE = (
@@ -42,6 +43,14 @@ VOTE_JSON_SCHEMA = {
     "confidence": "0..1",
     "reason": f"<={VOTE_REASON_LIMIT} chars",
 }
+
+VOTE_RUBRIC = (
+    "Use GO when the current idea is viable enough to test as stated. "
+    "Use NO_GO when the core premise has a fatal market, execution, or safety flaw. "
+    "Use PIVOT only when the idea has promise but needs a material change to target "
+    "customer, value proposition, distribution, or business model. Do not use PIVOT "
+    "as a compromise, uncertainty bucket, or default middle option."
+)
 
 
 def _safe_palm_summary(raw_context: str | None) -> str:
@@ -267,14 +276,22 @@ async def moderate(
         "You are the off-stage moderator for a five-agent startup council. "
         "Choose who should speak next, or call a vote if the debate is ready. "
         "Never choose the same speaker twice in a row. "
+        "Prefer agents with fewer prior turns unless the transcript clearly needs "
+        "a specific perspective. "
         f"{MODERATOR_REPLY_GUIDANCE} Return only strict JSON "
         f"matching this schema: {json.dumps(MODERATOR_JSON_SCHEMA, ensure_ascii=True)}."
     )
+    turn_counts = {
+        agent_key: sum(1 for item in transcript if item.get("agent") == agent_key)
+        for agent_key in PERSONAS
+    }
     user_prompt = (
         "Council context:\n"
         f"{council_context}\n\n"
         "Available agents:\n"
         f"{json.dumps(list(PERSONAS.keys()), ensure_ascii=True)}\n\n"
+        "Prior turn counts:\n"
+        f"{json.dumps(turn_counts, ensure_ascii=True)}\n\n"
         "Last speaker:\n"
         f"{last_speaker or 'none'}\n\n"
         "Transcript:\n"
@@ -310,6 +327,19 @@ async def moderate(
             replacement,
         )
         next_agent = replacement
+
+    unspoken_agents = [
+        agent_key
+        for agent_key in PERSONAS
+        if all(item.get("agent") != agent_key for item in transcript)
+    ]
+    if unspoken_agents:
+        action = "speak"
+        if next_agent not in unspoken_agents:
+            next_agent = next(
+                (agent_key for agent_key in unspoken_agents if agent_key != last_speaker),
+                unspoken_agents[0],
+            )
 
     return {
         "action": action,
@@ -371,9 +401,10 @@ async def stream_agent_turn(
 def _default_vote(agent_key: str) -> dict[str, Any]:
     return {
         "agent": agent_key,
-        "verdict": "PIVOT",
+        "verdict": "ABSTAIN",
         "confidence": 0.0,
         "reason": "vote unparseable",
+        "valid": False,
     }
 
 
@@ -388,6 +419,7 @@ async def _collect_vote(
         f"{persona['system_prompt']}\n\n"
         "You are now voting as a council member. "
         f"Keep the reason under {VOTE_REASON_LIMIT} characters. "
+        f"{VOTE_RUBRIC} "
         f"{VOTE_INSTRUCTIONS}"
     )
     user_prompt = (
@@ -419,6 +451,7 @@ async def _collect_vote(
             "verdict": verdict,
             "confidence": confidence,
             "reason": reason,
+            "valid": True,
         }
     except asyncio.CancelledError:
         raise
@@ -448,6 +481,8 @@ async def collect_votes(
 def supermajority(votes: list[dict[str, Any]]) -> tuple[dict[str, int], str | None, bool]:
     tally = {verdict: 0 for verdict in VERDICTS}
     for vote in votes:
+        if vote.get("valid") is False:
+            continue
         verdict = vote.get("verdict")
         if verdict in tally:
             tally[verdict] += 1
@@ -469,7 +504,8 @@ async def synthesize_verdict(
 ) -> AsyncIterator[dict[str, Any]]:
     system_prompt = (
         "You are the final court scribe. Synthesize the debate into a concise "
-        f"founder-facing verdict with the decision, rationale, and next move. {FINAL_REPLY_GUIDANCE}"
+        "founder-facing verdict with the decision, rationale, and next move. "
+        f"{VOTE_RUBRIC} {FINAL_REPLY_GUIDANCE}"
     )
     user_prompt = (
         "Council context:\n"
@@ -521,7 +557,8 @@ async def debate_council(
             council_context = (
                 "The founder's idea:\n"
                 f"{idea}\n\n"
-                "Palm reading context:\n"
+                "Palm reading context (entertainment flavor only; do not let "
+                "cursed status or destiny score determine the business verdict):\n"
                 f"{palm_summary}\n\n"
                 "Exa market research snippets:\n"
                 f"{json.dumps(exa_snippets, ensure_ascii=True, indent=2)}"
@@ -552,12 +589,20 @@ async def debate_council(
                     }
                 )
 
-                should_vote = (
-                    last_vote_turn != turn
+                has_full_opening_round = {
+                    item.get("agent") for item in transcript
+                } >= set(PERSONAS.keys())
+                can_vote = (
+                    has_full_opening_round
+                    and turn >= MIN_TURNS_BEFORE_VOTE
                     and (
-                        decision["action"] == "call_vote"
-                        or (turn > 0 and turn % VOTE_EVERY == 0)
+                        last_vote_turn is None
+                        or turn - last_vote_turn >= VOTE_EVERY
                     )
+                )
+                should_vote = can_vote and (
+                    decision["action"] == "call_vote"
+                    or (turn > 0 and turn % VOTE_EVERY == 0)
                 )
                 if should_vote:
                     vote_round += 1
@@ -572,6 +617,7 @@ async def debate_council(
                                 "verdict": vote["verdict"],
                                 "confidence": vote["confidence"],
                                 "reason": vote["reason"],
+                                "valid": vote.get("valid", True),
                                 "round": vote_round,
                             }
                         )
@@ -663,7 +709,8 @@ async def debate_stream(
         round_one_prompt = (
             "The founder's idea:\n"
             f"{idea}\n\n"
-            "Palm reading context:\n"
+            "Palm reading context (entertainment flavor only; do not let "
+            "cursed status or destiny score determine the business verdict):\n"
             f"{palm_summary}\n\n"
             "Exa market research snippets:\n"
             f"{research_block}\n\n"
