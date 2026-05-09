@@ -30,7 +30,7 @@ export default function AgentPortrait({ agentKey, isActive, phase, vote }: Agent
     >
       {showVote ? (
         <motion.div
-          className="absolute -top-12 z-20 w-24 rounded-md border border-primary/50 bg-background/95 px-2 py-1 shadow-glow backdrop-blur"
+          className="absolute -top-12 z-20 w-24 rounded-md border border-primary/50 bg-card px-2 py-1 shadow-md"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.24 }}

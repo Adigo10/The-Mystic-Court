@@ -32,7 +32,7 @@ The frontend expects the API at `http://localhost:8000`.
 
 1. Upload a palm photo. The FastAPI backend calls `gpt-5.5` with vision and returns a structured mystical reading.
 2. Enter an idea pitch. The frontend opens an EventSource stream to `/api/debate/council`, while the backend fetches Exa snippets and runs a compact moderated council with five `gpt-5.4-mini` personas.
-3. When the debate finishes, the backend asks `gpt-5.5` for the final verdict and uses `gpt-image-2-2026-04-21` to generate a tarot-style oracle card.
+3. When the debate finishes, the backend asks `gpt-5.5` for the final verdict and uses Gemini image generation to generate a tarot-style oracle card.
 
 ## Environment
 
@@ -41,4 +41,9 @@ The backend loads `.env` with `python-dotenv`.
 ```bash
 OPENAI_API_KEY=
 EXA_API_KEY=
+ELEVENLABS_API_KEY=
+GEMINI_API_KEY=
 ```
+
+Image generation tries `imagen-4.0-generate-001`, falls back to `gemini-3.1-flash-image-preview`, then falls back to OpenAI `gpt-image-1.5`.
+Override them with `GEMINI_IMAGEN_MODEL`, `GEMINI_IMAGE_MODEL`, or `OPENAI_IMAGE_MODEL` if your accounts expose different model names.

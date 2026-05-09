@@ -274,7 +274,7 @@ export default function CouncilChamber({
 
         {state.phase === "connecting" ? <CrystalBallLoader label="Opening the council channel" /> : null}
         {state.phase === "error" ? (
-          <p className="rounded-md border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">
+          <p className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
             {state.errorMessage || "The council stream closed unexpectedly. Check the FastAPI server and API keys."}
           </p>
         ) : null}
@@ -295,7 +295,7 @@ export default function CouncilChamber({
 
         <div
           className={cn(
-            "relative mx-auto hidden h-[480px] max-w-[620px] rounded-md border border-border bg-background/45 backdrop-blur md:block",
+            "relative mx-auto hidden h-[480px] max-w-[620px] rounded-md border border-border bg-muted/30 md:block",
             state.phase === "consensus" && "border-primary/70"
           )}
         >
@@ -331,7 +331,7 @@ export default function CouncilChamber({
           })}
         </div>
 
-        <div className="rounded-md border border-border bg-card/85 shadow-glow">
+        <div className="rounded-md border border-border bg-card shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <div className="font-serif text-lg font-bold text-foreground">Shared Transcript</div>
@@ -409,7 +409,7 @@ export default function CouncilChamber({
           ) : null}
         </div>
 
-        <div className="grid gap-3 rounded-md border border-border bg-card/70 p-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+        <div className="grid gap-3 rounded-md border border-border bg-muted/40 p-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
           <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
             Turn {state.turn}
           </div>
@@ -579,7 +579,7 @@ function TranscriptBubble({
 
   return (
     <motion.div
-      className="rounded-md border border-border bg-background/70 p-3"
+      className="rounded-md border border-border bg-muted/30 p-3"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}

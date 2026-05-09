@@ -8,7 +8,7 @@ export default function HomePage() {
     <main className="mystic-frame min-h-screen overflow-hidden">
       <section className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-6 py-16 text-center">
         <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full border border-primary/30 bg-primary/10 blur-3xl" />
-        <div className="relative flex h-24 w-24 animate-float items-center justify-center rounded-full border border-primary/40 bg-card/50 shadow-glow backdrop-blur">
+        <div className="relative flex h-24 w-24 animate-float items-center justify-center rounded-full border border-primary/40 bg-card shadow-glow">
           <Sparkles className="h-10 w-10 text-primary" />
         </div>
         <h1 className="relative mt-8 max-w-5xl animate-shimmer bg-[linear-gradient(90deg,hsl(var(--foreground)),hsl(var(--primary)),hsl(var(--foreground)))] bg-[length:200%_auto] bg-clip-text font-serif text-5xl font-black leading-tight text-transparent sm:text-7xl lg:text-8xl">

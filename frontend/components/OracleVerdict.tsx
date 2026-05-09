@@ -87,7 +87,7 @@ export default function OracleVerdict({
       <CardContent>
         {loading ? <CrystalBallLoader label="Forging the final card" /> : null}
         {error ? (
-          <p className="rounded-md border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">{error}</p>
+          <p className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>
         ) : null}
         {verdict ? (
           <motion.div

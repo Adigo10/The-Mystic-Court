@@ -163,7 +163,7 @@ export default function PalmScanner({ onReading }: { onReading: (reading: PalmRe
         {mode === "camera" && (
           <div className="space-y-3">
             {cameraError ? (
-              <p className="rounded-md border border-yellow-500/50 bg-yellow-950/30 p-3 text-sm text-yellow-100">
+              <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
                 <CameraOff className="mb-1 inline h-4 w-4" /> {cameraError}
               </p>
             ) : captured ? (
@@ -230,7 +230,7 @@ export default function PalmScanner({ onReading }: { onReading: (reading: PalmRe
                 void handleFile(e.dataTransfer.files?.[0]);
               }}
               onDragOver={(e) => e.preventDefault()}
-              className="flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-primary/50 bg-background/45 p-6 text-center transition hover:bg-accent/30"
+              className="flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-primary/40 bg-muted/40 p-6 text-center transition hover:bg-accent/60"
             >
               {previewUrl ? (
                 <img
@@ -264,7 +264,7 @@ export default function PalmScanner({ onReading }: { onReading: (reading: PalmRe
 
         {loading ? <CrystalBallLoader label="Reading the palm lines" /> : null}
         {error ? (
-          <p className="rounded-md border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">
+          <p className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
             {error}
           </p>
         ) : null}
@@ -304,7 +304,7 @@ export default function PalmScanner({ onReading }: { onReading: (reading: PalmRe
 
 function HighlightList({ title, values }: { title: string; values: string[] }) {
   return (
-    <div className="rounded-md border border-border bg-background/35 p-3">
+    <div className="rounded-md border border-border bg-muted/50 p-3">
       <p className="mb-2 font-semibold text-primary">{title}</p>
       <ul className="space-y-1 text-muted-foreground">
         {values.slice(0, 4).map((value) => (

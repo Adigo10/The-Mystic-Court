@@ -3,54 +3,59 @@
 @tailwind utilities;
 
 :root {
-  --background: 250 42% 7%;
-  --foreground: 42 44% 92%;
-  --card: 252 32% 12%;
-  --card-foreground: 42 44% 92%;
-  --muted: 252 20% 18%;
-  --muted-foreground: 38 18% 70%;
-  --accent: 278 36% 24%;
-  --accent-foreground: 42 44% 92%;
-  --primary: 24 91% 57%;
-  --primary-foreground: 252 40% 8%;
-  --border: 42 34% 29%;
-  --input: 42 26% 31%;
-  --ring: 38 90% 64%;
+  --background: 42 32% 96%;
+  --foreground: 248 28% 14%;
+  --card: 42 20% 99%;
+  --card-foreground: 248 28% 14%;
+  --muted: 42 18% 92%;
+  --muted-foreground: 38 12% 50%;
+  --accent: 42 22% 90%;
+  --accent-foreground: 248 28% 14%;
+  --primary: 28 72% 40%;
+  --primary-foreground: 42 35% 97%;
+  --border: 38 20% 84%;
+  --input: 38 16% 88%;
+  --ring: 28 78% 50%;
 }
 
 html.element-fire {
-  --primary: 19 95% 58%;
-  --accent: 348 54% 24%;
-  --ring: 36 95% 62%;
+  --primary: 22 84% 40%;
+  --accent: 22 28% 91%;
+  --ring: 30 88% 50%;
 }
 
 html.element-water {
-  --primary: 184 82% 54%;
-  --accent: 213 54% 23%;
-  --ring: 178 88% 62%;
+  --primary: 194 68% 30%;
+  --accent: 195 28% 91%;
+  --ring: 188 72% 40%;
 }
 
 html.element-earth {
-  --primary: 123 45% 52%;
-  --accent: 78 32% 22%;
-  --ring: 96 58% 60%;
+  --primary: 134 42% 30%;
+  --accent: 90 24% 91%;
+  --ring: 110 50% 40%;
 }
 
 html.element-air {
-  --primary: 267 76% 70%;
-  --accent: 237 30% 27%;
-  --ring: 284 72% 72%;
+  --primary: 267 54% 40%;
+  --accent: 240 24% 92%;
+  --ring: 280 60% 50%;
 }
 
 html.cursed {
-  --background: 358 58% 5%;
+  --background: 358 42% 7%;
   --foreground: 24 30% 91%;
-  --card: 358 48% 9%;
-  --muted: 358 40% 14%;
-  --accent: 354 72% 20%;
-  --primary: 354 94% 45%;
-  --border: 354 52% 30%;
-  --ring: 354 94% 48%;
+  --card: 358 36% 10%;
+  --card-foreground: 24 30% 91%;
+  --muted: 358 28% 15%;
+  --muted-foreground: 24 18% 60%;
+  --accent: 354 50% 18%;
+  --accent-foreground: 24 30% 91%;
+  --primary: 354 88% 48%;
+  --primary-foreground: 0 0% 98%;
+  --border: 354 38% 28%;
+  --input: 354 30% 22%;
+  --ring: 354 88% 52%;
 }
 
 * {
@@ -60,21 +65,21 @@ html.cursed {
 html {
   min-height: 100%;
   background:
-    radial-gradient(circle at 20% 10%, hsl(var(--primary) / 0.20), transparent 34rem),
-    radial-gradient(circle at 80% 20%, hsl(var(--accent) / 0.36), transparent 28rem),
+    radial-gradient(ellipse at 16% 12%, hsl(var(--primary) / 0.07), transparent 28rem),
+    radial-gradient(ellipse at 84% 20%, hsl(var(--accent) / 0.20), transparent 22rem),
     hsl(var(--background));
 }
 
 body {
   min-height: 100vh;
   background:
-    linear-gradient(115deg, hsl(var(--background) / 0.92), hsl(var(--background) / 0.76)),
-    repeating-linear-gradient(90deg, transparent 0 54px, hsl(var(--foreground) / 0.025) 55px 56px);
+    linear-gradient(120deg, hsl(var(--background) / 0.98), hsl(var(--background) / 0.95)),
+    repeating-linear-gradient(90deg, transparent 0 54px, hsl(var(--foreground) / 0.012) 55px 56px);
   color: hsl(var(--foreground));
 }
 
 ::selection {
-  background: hsl(var(--primary) / 0.35);
+  background: hsl(var(--primary) / 0.20);
 }
 
 .mystic-frame {
@@ -87,11 +92,11 @@ body {
   inset: 0;
   pointer-events: none;
   background-image:
-    radial-gradient(circle at 10% 20%, hsl(var(--foreground) / 0.35) 1px, transparent 1.4px),
-    radial-gradient(circle at 70% 30%, hsl(var(--primary) / 0.45) 1px, transparent 1.5px),
-    radial-gradient(circle at 45% 80%, hsl(var(--foreground) / 0.25) 1px, transparent 1.4px);
+    radial-gradient(circle at 10% 20%, hsl(var(--foreground) / 0.16) 1px, transparent 1.4px),
+    radial-gradient(circle at 70% 30%, hsl(var(--primary) / 0.28) 1px, transparent 1.5px),
+    radial-gradient(circle at 45% 80%, hsl(var(--foreground) / 0.10) 1px, transparent 1.4px);
   background-size: 180px 180px, 240px 240px, 210px 210px;
-  mask-image: linear-gradient(to bottom, black, transparent 78%);
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
 }
 
 .text-shimmer {
@@ -108,7 +113,7 @@ body {
 }
 
 .cursed-banner {
-  background: linear-gradient(90deg, hsl(354 94% 24%), hsl(0 76% 13%));
+  background: linear-gradient(90deg, hsl(354 88% 28%), hsl(0 70% 14%));
   color: hsl(24 30% 94%);
-  box-shadow: 0 0 36px hsl(354 94% 42% / 0.32);
+  box-shadow: 0 0 36px hsl(354 88% 40% / 0.30);
 }

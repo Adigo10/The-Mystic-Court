@@ -91,9 +91,9 @@ export default function CourtPage() {
                   {Object.entries(AGENT_META).map(([agentKey, agent]) => (
                     <div
                       key={agentKey}
-                      className="rounded-md border border-border bg-card/70 p-4 text-center"
+                      className="rounded-md border border-border bg-muted/40 p-4 text-center"
                     >
-                      <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-border bg-background text-2xl font-black text-primary shadow-glow">
+                      <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-border bg-card text-2xl font-black text-primary shadow-sm">
                         {agent.emoji}
                       </div>
                       <div className="mt-3 text-sm font-semibold text-foreground">{agent.name}</div>
