@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 250 42% 7%;
+  --foreground: 42 44% 92%;
+  --card: 252 32% 12%;
+  --card-foreground: 42 44% 92%;
+  --muted: 252 20% 18%;
+  --muted-foreground: 38 18% 70%;
+  --accent: 278 36% 24%;
+  --accent-foreground: 42 44% 92%;
+  --primary: 24 91% 57%;
+  --primary-foreground: 252 40% 8%;
+  --border: 42 34% 29%;
+  --input: 42 26% 31%;
+  --ring: 38 90% 64%;
+}
+
+html.element-fire {
+  --primary: 19 95% 58%;
+  --accent: 348 54% 24%;
+  --ring: 36 95% 62%;
+}
+
+html.element-water {
+  --primary: 184 82% 54%;
+  --accent: 213 54% 23%;
+  --ring: 178 88% 62%;
+}
+
+html.element-earth {
+  --primary: 123 45% 52%;
+  --accent: 78 32% 22%;
+  --ring: 96 58% 60%;
+}
+
+html.element-air {
+  --primary: 267 76% 70%;
+  --accent: 237 30% 27%;
+  --ring: 284 72% 72%;
+}
+
+html.cursed {
+  --background: 358 58% 5%;
+  --foreground: 24 30% 91%;
+  --card: 358 48% 9%;
+  --muted: 358 40% 14%;
+  --accent: 354 72% 20%;
+  --primary: 354 94% 45%;
+  --border: 354 52% 30%;
+  --ring: 354 94% 48%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 20% 10%, hsl(var(--primary) / 0.20), transparent 34rem),
+    radial-gradient(circle at 80% 20%, hsl(var(--accent) / 0.36), transparent 28rem),
+    hsl(var(--background));
+}
+
+body {
+  min-height: 100vh;
+  background:
+    linear-gradient(115deg, hsl(var(--background) / 0.92), hsl(var(--background) / 0.76)),
+    repeating-linear-gradient(90deg, transparent 0 54px, hsl(var(--foreground) / 0.025) 55px 56px);
+  color: hsl(var(--foreground));
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.35);
+}
+
+.mystic-frame {
+  position: relative;
+}
+
+.mystic-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 10% 20%, hsl(var(--foreground) / 0.35) 1px, transparent 1.4px),
+    radial-gradient(circle at 70% 30%, hsl(var(--primary) / 0.45) 1px, transparent 1.5px),
+    radial-gradient(circle at 45% 80%, hsl(var(--foreground) / 0.25) 1px, transparent 1.4px);
+  background-size: 180px 180px, 240px 240px, 210px 210px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--foreground)),
+    hsl(var(--primary)),
+    hsl(var(--foreground))
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cursed-banner {
+  background: linear-gradient(90deg, hsl(354 94% 24%), hsl(0 76% 13%));
+  color: hsl(24 30% 94%);
+  box-shadow: 0 0 36px hsl(354 94% 42% / 0.32);
+}

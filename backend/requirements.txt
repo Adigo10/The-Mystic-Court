@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sse-starlette
+openai
+exa_py
+python-multipart
+pillow
+httpx
+python-dotenv
