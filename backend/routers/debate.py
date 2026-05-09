@@ -610,6 +610,7 @@ async def debate_council(
                 )
                 last_speaker = agent_key
                 turn += 1
+                await asyncio.sleep(1.5)
 
             final_text: list[str] = []
             async for payload in synthesize_verdict(

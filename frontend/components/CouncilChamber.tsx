@@ -75,6 +75,21 @@ const INITIAL_STATE: CouncilState = {
   errorMessage: ""
 };
 
+async function playAgentAudio(agent: AgentKey, text: string): Promise<void> {
+  try {
+    const params = new URLSearchParams({ text, agent });
+    const response = await fetch(`${API_BASE}/api/tts?${params.toString()}`);
+    if (!response.ok) return;
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = () => URL.revokeObjectURL(url);
+    await audio.play();
+  } catch {
+    // Silently fall back if TTS is unavailable or autoplay is blocked
+  }
+}
+
 export default function CouncilChamber({
   idea,
   palmContext,
@@ -87,6 +102,7 @@ export default function CouncilChamber({
   const [state, setState] = React.useState<CouncilState>(INITIAL_STATE);
   const stateRef = React.useRef<CouncilState>(INITIAL_STATE);
   const transcriptRef = React.useRef<HTMLDivElement | null>(null);
+  const seenTurnsRef = React.useRef<Set<string>>(new Set());
 
   const updateState = React.useCallback((updater: (current: CouncilState) => CouncilState) => {
     const next = updater(stateRef.current);
@@ -95,6 +111,7 @@ export default function CouncilChamber({
   }, []);
 
   React.useEffect(() => {
+    seenTurnsRef.current = new Set();
     stateRef.current = INITIAL_STATE;
     setState(INITIAL_STATE);
 
@@ -152,6 +169,16 @@ export default function CouncilChamber({
     }
     element.scrollTop = element.scrollHeight;
   }, [state.transcript, state.streamingByTurn, state.finalVerdict]);
+
+  React.useEffect(() => {
+    for (const message of state.transcript) {
+      const key = `${message.agent}-${message.turn}`;
+      if (!seenTurnsRef.current.has(key)) {
+        seenTurnsRef.current.add(key);
+        void playAgentAudio(message.agent, message.text);
+      }
+    }
+  }, [state.transcript]);
 
   const liveTurnText =
     state.currentSpeaker !== null ? state.streamingByTurn[state.turn] || "" : "";
@@ -486,8 +513,8 @@ function RevealText({ text, done }: { text: string; done: boolean }) {
       return;
     }
     const timer = window.setInterval(() => {
-      setVisible((current) => text.slice(0, Math.min(text.length, current.length + 4)));
-    }, 18);
+      setVisible((current) => text.slice(0, Math.min(text.length, current.length + 2)));
+    }, 40);
     return () => window.clearInterval(timer);
   }, [text, visible.length]);
 
